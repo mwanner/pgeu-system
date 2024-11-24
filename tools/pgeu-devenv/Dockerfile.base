@@ -1,0 +1,81 @@
+FROM debian:bullseye-slim
+
+# Common base image used by the uwsgi service as well as the maintenance
+# script. Lots of the same python modules are used, so it's easier to create
+# a common base image.
+
+# pull in basic system packages, including requirements for pgapt
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    gettext \
+    gnupg2 \
+    fonts-dejavu \
+    python3 \
+    python3-pip \
+  && rm -rf /var/lib/apt/lists/*
+
+# add the pgapt repository
+RUN install -d /etc/apt/keyrings
+RUN curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    | gpg --dearmor -o /etc/apt/keyrings/pgdg.gpg
+RUN echo "deb [signed-by=/etc/apt/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt bullseye-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+RUN cat /etc/apt/sources.list.d/pgdg.list && \
+    apt-get update && rm -rf /var/lib/apt/lists/*
+
+# pull in required python modules from Debian packages
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+    python-is-python3 \
+    python3-asgiref \
+    python3-cairosvg \
+    python3-cryptography \
+    python3-dateutil \
+    python3-httplib2 \
+    python3-jwt \
+    python3-magic \
+    python3-markdown \
+    python3-qrcode \
+    python3-requests \
+    python3-requests-oauthlib \
+    python3-sqlparse \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+    gcc \
+    libjpeg-dev \
+    libpng-dev \
+    python3-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+# These dependencies are either not available at all or in incompatible
+# versions. Download and install via pip.
+RUN pip install \
+    "Django>=4.2,<4.3" \
+    "MarkupSafe==1.1.0" \
+    "Jinja2>=2.10,<2.11" \
+    Pillow==5.4.1 \
+    flup \
+    argparse \
+    psycopg2-binary \
+    pycryptodomex==3.6.1 \
+    "reportlab>=3.5.59,<3.7" \
+    file-magic \
+    pymupdf \
+  && rm -rf /root/.cache/pip
+
+# Create mount points for the actual source code, the skin, and the settings
+# file.
+RUN mkdir /srv/pgeu-system /srv/skin /srv/settings
+
+# Setup permissions for the www-data user to be able to access the database.
+RUN mkdir /var/www \
+  && echo "db:5432:*:postgres:postgres" > /var/www/.pgpass \
+  && echo "db:5432:*:postgresqleu:postgresqleu" >> /var/www/.pgpass \
+  && chown www-data: /var/www/.pgpass \
+  && chmod 400 /var/www/.pgpass
+ENV PGHOST="db"
+ENV PGDATABASE="postgresqleu"
+ENV PGUSER="postgresqleu"

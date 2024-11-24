@@ -1,0 +1,25 @@
+FROM pgeu-system-python-base
+
+# Pull in basic system packages helpful for diagnostics and maintenance, even
+# through manual operation through psql. (And which are not needed
+# for the uwsgi image and therefore aren't in the base image already).
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+    postgresql-client \
+  && rm -rf /var/lib/apt/lists/*
+
+# Allow loading the pgeu_system_settings.py module mounted into the
+# container under this settings path (on the uwsgi side, this is done through
+# the uwsgi.ini config file, instead).
+ENV PYTHONPATH=/srv/settings
+
+# Mount point for static files to generate.
+RUN mkdir -p /srv/static/media \
+  && chown www-data: /srv/static/media
+
+# Copy script that does the automation work underneath.
+COPY maintenance.py /srv/maintenance.py
+
+USER www-data
+WORKDIR /srv/pgeu-system
+CMD ["python3", "/srv/maintenance.py"]

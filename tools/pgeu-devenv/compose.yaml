@@ -1,0 +1,56 @@
+volumes:
+  static-content: {}
+
+services:
+  httpd:
+    build:
+      context: .
+      dockerfile:  Dockerfile.httpd
+    volumes:
+      - "static-content:/srv/static/media:ro"
+    ports:
+      - "${EXP_PORT}:80"
+
+  uwsgi:
+    build:
+      context: .
+      dockerfile: Dockerfile.uwsgi
+    volumes:
+      # Mount the checkout of the pgeu-system itself.
+      - "../..:/srv/pgeu-system:ro"
+
+      # Mount the directory where the skin lives.
+      - ${SKIN_DIR}:/srv/skin:ro"
+
+      # Mount in the generated settings files.
+      - "./.gen.pgeu_system_settings.py:/srv/settings/pgeu_system_settings.py:ro"
+      - "./.gen.pgeu_system_override_settings.py:/srv/settings/pgeu_system_override_settings.py:ro"
+
+  maintenance:
+    build:
+      context: .
+      dockerfile: Dockerfile.maintenance
+    volumes:
+      # Mount the checkout of the pgeu-system itself.
+      - "../..:/srv/pgeu-system:ro"
+
+      # Mount the directory where the skin lives.
+      - ${SKIN_DIR}:/srv/skin:ro"
+
+      # Mount in the generated settings files.
+      - "./.gen.pgeu_system_settings.py:/srv/settings/pgeu_system_settings.py:ro"
+      - "./.gen.pgeu_system_override_settings.py:/srv/settings/pgeu_system_override_settings.py:ro"
+
+      # collectstatic writes static files to this volume to be consumed by
+      # httpd.
+      - "static-content:/srv/static/media"
+
+  db:
+    image: postgres:${POSTGRES_VERSION}
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - "/var/lib/postgresql/data"
+    ports:
+      - "5433:5432"

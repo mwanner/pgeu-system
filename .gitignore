@@ -2,5 +2,8 @@
 *.pyc
 python
 .idea/
+tools/pgeu-devenv/.gen*
+tools/pgeu-devenv/.stamp.*
+tools/pgeu-devenv/env.sh
 tools/devsetup/venv_dev/
 devserver-uwsgi.ini

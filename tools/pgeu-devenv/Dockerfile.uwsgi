@@ -1,0 +1,18 @@
+FROM pgeu-system-python-base
+
+# Install packages required to run the uwsgi service (which are not needed
+# for the maintenance image and therefore aren't in the base image already).
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+    uwsgi \
+    uwsgi-plugin-python3 \
+  && rm -rf /var/lib/apt/lists/*
+
+# Copy in the service configuration.
+COPY uwsgi.ini /etc/uwsgi.ini
+
+EXPOSE 8000
+
+USER www-data
+WORKDIR /srv/pgeu-system
+CMD ["uwsgi", "--ini", "/etc/uwsgi.ini"]
